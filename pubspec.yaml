@@ -1,0 +1,11 @@
+name: httpserver
+description: Sample HTTP clients and servers
+homepage: https://www.dartlang.org/docs/tutorials/httpserver/
+
+environment:
+  sdk: '>=2.0.0 <3.0.0'
+
+dependencies:
+  http_server: ^0.9.6
+  build_runner: '>=0.8.10 <2.0.0'
+  build_web_compilers: '>=0.3.6 <2.0.0'
