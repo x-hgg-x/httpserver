@@ -1,19 +1,25 @@
-// Copyright (c) 2014, the Dart project authors.  Please see the AUTHORS file
-// for details. All rights reserved. Use of this source code is governed by a
-// BSD-style license that can be found in the LICENSE file.
-
 // Client program is note_client.dart.
 // Use note_taker.html to run the client.
 
 import 'dart:async';
 import 'dart:io';
 import 'dart:convert' show utf8, json;
+import 'package:http_server/http_server.dart';
 
 int count = 0;
+VirtualDirectory staticFiles = VirtualDirectory('.build/web');
 
 Future main() async {
-  // One note per line.
+  staticFiles
+    ..allowDirectoryListing = true
+    ..jailRoot = false
+    ..directoryHandler = (dir, request) {
+      var indexUri = Uri.file(dir.path).resolve('index.html');
+      staticFiles.serveFile(File(indexUri.toFilePath()), request);
+    };
+
   try {
+    // One note per line.
     List<String> lines = File('notes.txt').readAsLinesSync();
     count = lines.length;
   } on FileSystemException {
@@ -21,14 +27,17 @@ Future main() async {
     return;
   }
 
-  var server = await HttpServer.bind(InternetAddress.loopbackIPv4, 4040);
-  print('Listening for requests on 4040.');
+  var server = await HttpServer.bind(InternetAddress.loopbackIPv4, 8080);
+  print('Listening for requests on http://localhost:8080.');
   await listenForRequests(server);
 }
 
 Future listenForRequests(HttpServer requests) async {
   await for (HttpRequest request in requests) {
     switch (request.method) {
+      case 'GET':
+        handleGet(request);
+        break;
       case 'POST':
         handlePost(request);
         break;
@@ -43,14 +52,18 @@ Future listenForRequests(HttpServer requests) async {
   print('No more requests.');
 }
 
+Future handleGet(HttpRequest request) async {
+  addCorsHeaders(request.response);
+  staticFiles.serveRequest(request);
+}
+
 Future handlePost(HttpRequest request) async {
   Map decoded;
 
   addCorsHeaders(request.response);
 
   try {
-    decoded =
-        await request.transform(utf8.decoder.fuse(json.decoder)).first as Map;
+    decoded = await request.transform(utf8.decoder.fuse(json.decoder)).first as Map;
   } catch (e) {
     print('Request listen error: $e');
     return;
@@ -113,7 +126,6 @@ void handleOptions(HttpRequest request) {
 
 void addCorsHeaders(HttpResponse response) {
   response.headers.add('Access-Control-Allow-Origin', '*');
-  response.headers.add('Access-Control-Allow-Methods', 'POST, OPTIONS');
-  response.headers.add('Access-Control-Allow-Headers',
-      'Origin, X-Requested-With, Content-Type, Accept');
+  response.headers.add('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  response.headers.add('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
 }

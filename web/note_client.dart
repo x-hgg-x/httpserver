@@ -10,7 +10,7 @@ ParagraphElement howManyNotes;
 TextInputElement chooseNote;
 ParagraphElement displayNote;
 HttpRequest request;
-String url = 'http://localhost:4040';
+String url = 'http://localhost:8080';
 
 void main() {
   noteTextInput = querySelector('#note_entry') as TextInputElement;
