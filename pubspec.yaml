@@ -1,6 +1,6 @@
 name: httpserver
-description: Sample HTTP clients and servers
-homepage: https://www.dartlang.org/docs/tutorials/httpserver/
+description: Small HttpServer app in Dart
+homepage: https://github.com/x-hgg-x/httpserver
 
 environment:
   sdk: '>=2.0.0 <3.0.0'
