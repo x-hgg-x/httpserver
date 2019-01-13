@@ -10,7 +10,6 @@ ParagraphElement howManyNotes;
 TextInputElement chooseNote;
 ParagraphElement displayNote;
 HttpRequest request;
-String url = 'http://localhost:8080';
 
 void main() {
   noteTextInput = querySelector('#note_entry') as TextInputElement;
@@ -23,23 +22,21 @@ void main() {
 }
 
 void saveNote(Event e) {
-  request = HttpRequest();
-  request.onReadyStateChange.listen(onData);
-
-  request.open('POST', url);
-  request.send('{"myNote":"${noteTextInput.value}"}');
+  if (noteTextInput.value.isNotEmpty) {
+    request = HttpRequest();
+    request.onReadyStateChange.listen(onData);
+    request.open('POST', '/');
+    request.send('{"myNote":"${noteTextInput.value}"}');
+  }
 }
 
 void requestNote(Event e) {
-  if (chooseNote.value.isEmpty) return;
-
-  int getNoteNumber = int.tryParse(chooseNote.value) ?? 0;
-
-  request = HttpRequest();
-  request.onReadyStateChange.listen(onData);
-
-  request.open('POST', url);
-  request.send('{"getNote":"$getNoteNumber"}');
+  if (chooseNote.value.isNotEmpty) {
+    request = HttpRequest();
+    request.onReadyStateChange.listen(onData);
+    request.open('GET', '/note?q=${chooseNote.value}');
+    request.send();
+  }
 }
 
 void onData(_) {
@@ -51,6 +48,6 @@ void onData(_) {
     }
   } else if (request.readyState == HttpRequest.DONE && request.status == 0) {
     // Status is 0; most likely the server isn't running.
-    howManyNotes.text = 'No server on $url';
+    howManyNotes.text = 'No server connection';
   }
 }

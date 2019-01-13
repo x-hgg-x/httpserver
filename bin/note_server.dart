@@ -34,6 +34,7 @@ Future main() async {
 
 Future listenForRequests(HttpServer requests) async {
   await for (HttpRequest request in requests) {
+    addCorsHeaders(request.response);
     switch (request.method) {
       case 'GET':
         handleGet(request);
@@ -53,14 +54,15 @@ Future listenForRequests(HttpServer requests) async {
 }
 
 Future handleGet(HttpRequest request) async {
-  addCorsHeaders(request.response);
-  staticFiles.serveRequest(request);
+  if (request.uri.path == '/note' && request.uri.queryParameters['q'] != null) {
+    getNote(request);
+  } else {
+    staticFiles.serveRequest(request);
+  }
 }
 
 Future handlePost(HttpRequest request) async {
   Map decoded;
-
-  addCorsHeaders(request.response);
 
   try {
     decoded = await request.transform(utf8.decoder.fuse(json.decoder)).first as Map;
@@ -68,11 +70,8 @@ Future handlePost(HttpRequest request) async {
     print('Request listen error: $e');
     return;
   }
-
   if (decoded.containsKey('myNote')) {
     saveNote(request, "${decoded['myNote']}\n");
-  } else {
-    getNote(request, decoded['getNote'] as String);
   }
 }
 
@@ -95,31 +94,41 @@ void saveNote(HttpRequest request, String myNote) {
     ..close();
 }
 
-void getNote(HttpRequest request, String getNote) {
-  final requestedNote = int.tryParse(getNote) ?? 0;
-  if (requestedNote >= 0 && requestedNote < count) {
-    List<String> lines = File('notes.txt').readAsLinesSync();
+void getNote(HttpRequest request) {
+  final requestedNote = int.tryParse(request.uri.queryParameters['q']) ?? 0;
+
+  if (requestedNote >= 1 && requestedNote <= count) {
+    try {
+      List<String> lines = File('notes.txt').readAsLinesSync();
+      request.response
+        ..statusCode = HttpStatus.ok
+        ..writeln(lines[requestedNote - 1])
+        ..close();
+    } catch (e) {
+      print('Couldn\'t open notes.txt at line ${requestedNote}: $e');
+      request.response
+        ..statusCode = HttpStatus.internalServerError
+        ..writeln('Couldn\'t open note.')
+        ..close();
+    }
+  } else {
     request.response
-      ..statusCode = HttpStatus.ok
-      ..writeln(lines[requestedNote])
+      ..statusCode = HttpStatus.notFound
+      ..writeln('Note not found.')
       ..close();
   }
 }
 
 void defaultHandler(HttpRequest request) {
-  final response = request.response;
-  addCorsHeaders(response);
-  response
+  request.response
     ..statusCode = HttpStatus.notFound
     ..write('Not found: ${request.method}, ${request.uri.path}')
     ..close();
 }
 
 void handleOptions(HttpRequest request) {
-  final response = request.response;
-  addCorsHeaders(response);
   print('${request.method}: ${request.uri.path}');
-  response
+  request.response
     ..statusCode = HttpStatus.noContent
     ..close();
 }
